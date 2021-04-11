@@ -28,15 +28,14 @@ namespace QCHack.Task3 {
         use b = Qubit();
         CNOT(inputs[0], output);
         CNOT(inputs[1], output);
-        CNOT(inputs[0], a);
-        CNOT(inputs[2], a);
-        CNOT(inputs[1], b);
-        CNOT(inputs[2], b);
-        CCNOT(a, b, output);
-        CNOT(inputs[0], a);
-        CNOT(inputs[2], a);
-        CNOT(inputs[1], b);
-        CNOT(inputs[2], b);
+        within{
+            CNOT(inputs[0], a);
+            CNOT(inputs[2], a);
+            CNOT(inputs[1], b);
+            CNOT(inputs[2], b);
+        }apply{
+            CCNOT(a, b, output);
+        }
     }
 }
 
