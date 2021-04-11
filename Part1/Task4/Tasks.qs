@@ -1,6 +1,9 @@
 namespace QCHack.Task4 {
     open Microsoft.Quantum.Canon;
     open Microsoft.Quantum.Intrinsic;
+    open Microsoft.Quantum.Diagnostics;
+    open Microsoft.Quantum.Convert;
+    open Microsoft.Quantum.Arrays;
 
     // Task 4 (12 points). f(x) = 1 if the graph edge coloring is triangle-free
     // 
@@ -43,7 +46,81 @@ namespace QCHack.Task4 {
         colorsRegister : Qubit[], 
         target : Qubit
     ) : Unit is Adj+Ctl {
-        // ...
+        if Length(edges) < 3{
+            X(target);
+        }else{
+            let AdjM = constructAdjacencyMatrix(V, edges);
+            let triangles = findTriangles(V, AdjM);
+            if Length(triangles)==0{
+                X(target);
+            }else{
+                X(colorsRegister[0]);
+                X(colorsRegister[0]);
+                use monoTri = Qubit[Length(triangles)];
+                for t in 0..Length(triangles)-1{
+                    Task3_ValidTriangle(Subarray(findEdgeIndices(triangles[t], edges), colorsRegister), monoTri[t]);
+                }
+                Controlled X(monoTri, target);
+                for t in 0..Length(triangles)-1{
+                    mutable (i, j, k) = triangles[t];
+                    Task3_ValidTriangle(Subarray(findEdgeIndices(triangles[t], edges), colorsRegister), monoTri[t]);
+                }
+            }
+        }
+    }
+
+    operation Task3_ValidTriangle (inputs : Qubit[], output : Qubit) : Unit is Adj+Ctl {
+        use a = Qubit();
+        use b = Qubit();
+        CNOT(inputs[0], output);
+        CNOT(inputs[1], output);
+        CNOT(inputs[0], a);
+        CNOT(inputs[2], a);
+        CNOT(inputs[1], b);
+        CNOT(inputs[2], b);
+        CCNOT(a, b, output);
+        CNOT(inputs[0], a);
+        CNOT(inputs[2], a);
+        CNOT(inputs[1], b);
+        CNOT(inputs[2], b);
+    }
+
+    function constructAdjacencyMatrix(V: Int, edges: (Int, Int)[]):Int[]{
+        mutable AdjM = new Int[V^2];
+        for edge in edges{
+            mutable (x, y) = edge;
+            set AdjM w/= x*V+y <- 1;
+            set AdjM w/= y*V+x <- 1;
+        }
+        return AdjM;
+    }
+
+    function findTriangles(V: Int, AdjM: Int[]): (Int, Int, Int)[]{
+        mutable triangles = new (Int, Int, Int)[0];
+        for i in 0..V-3{
+            for j in i+1..V-2{
+                if AdjM[i*V+j]==1{
+                    for k in j+1..V-1{
+                        if AdjM[j*V+k]==1 and AdjM[k*V+i]==1 {
+                            set triangles += [(i, j, k)];
+                        }
+                    }
+                }
+            }
+        }
+        return triangles;
+    }
+
+    function findEdgeIndices(triangle: (Int, Int, Int), edges: (Int, Int)[]): Int[]{
+        let (i, j, k) = triangle;
+        mutable indices = new Int[0];
+        for e in 0..Length(edges)-1{
+            mutable (u, v) = edges[e];
+            if (u == i or u == j or u == k) and (v == i or v == j or v == k){
+                set indices += [e];
+            }
+        }
+        return indices;
     }
 }
 
